@@ -53,14 +53,22 @@ const enoughDataOnSomeCurves = (data: Object) => data &&
 async function fetchCurves(
   filters: ?Array<Object>,
   size: number,
-  hasMultipleCurves: Boolean
+  hasMultipleCurves: Boolean,
+  {
+    addControlledAccessParams = () => ({}),
+    requiresStudy = '',
+  },
 ): Promise<Object> {
   const params = omitBy(
     {
       filters: filters && JSON.stringify(filters),
       size,
+      ...addControlledAccessParams( // This function will also log queries out in dev mode.
+        requiresStudy,
+        requiresStudy,
+      ),
     },
-    isNil
+    isNil,
   );
   const url = `analysis/survival?${queryString.stringify(params)}`;
   performanceTracker.begin('survival:fetch');
@@ -91,12 +99,22 @@ async function fetchCurves(
 }
 
 export const getDefaultCurve = memoize(
-  async ({ currentFilters, size, slug }: TPropsDefault): Promise<Object> => {
+  async ({
+    addControlledAccessParams,
+    currentFilters,
+    size,
+    slug = 'unsluggedSurvivalPlot',
+  }: TPropsDefault): Promise<Object> => {
     const rawData = await fetchCurves(
       Array.isArray(currentFilters)
         ? currentFilters
         : currentFilters && [currentFilters],
-      size
+      size,
+      null,
+      {
+        addControlledAccessParams,
+        requiresStudy: `${slug}${addControlledAccessParams ? 'RequiresStudy' : ''}`,
+      },
     );
     const hasEnoughData = enoughData(rawData);
 
@@ -123,7 +141,7 @@ export const getDefaultCurve = memoize(
     max: 10,
     promise: true,
     normalizer: args => JSON.stringify(args[0]),
-  }
+  },
 );
 
 export const getSurvivalCurves = memoize(
@@ -149,7 +167,7 @@ export const getSurvivalCurves = memoize(
             },
           ],
         },
-        currentFilters
+        currentFilters,
       ),
       replaceFilters(
         {
@@ -164,7 +182,7 @@ export const getSurvivalCurves = memoize(
             },
           ],
         },
-        currentFilters
+        currentFilters,
       ),
     ];
 
@@ -260,7 +278,7 @@ export const getSurvivalCurves = memoize(
     max: 10,
     promise: true,
     normalizer: args => JSON.stringify(args[0]),
-  }
+  },
 );
 
 export const getSurvivalCurvesArray = memoize(
@@ -288,9 +306,9 @@ export const getSurvivalCurvesArray = memoize(
               },
             ],
           },
-          currentFilters
+          currentFilters,
         );
-      }
+      },
     );
 
     const rawData = await fetchCurves(filters, size, true);
@@ -367,5 +385,5 @@ export const getSurvivalCurvesArray = memoize(
     max: 10,
     promise: true,
     normalizer: args => JSON.stringify(args[0]),
-  }
+  },
 );
